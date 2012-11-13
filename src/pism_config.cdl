@@ -34,6 +34,9 @@ netcdf pism_config {
     pism_config:do_skip = "no";
     pism_config:do_skip_doc = "Use the temperature, age, and SSA stress balance computation skipping mechanism.";
 
+    pism_config:avoid_gl_fix = "no";
+    pism_config:avoid_gl_fix_doc = "Do not use fix for calculation of driving stress across grounding line.";
+
     pism_config:count_time_steps = "no";
     pism_config:count_time_steps_doc = "If yes, IceModel::run() will count the number of time steps it took.  Sometimes useful for performance evaluation.  Counts all steps, regardless of whether processes (mass continuity, energy, velocity, ...) occurred within the step.";
 

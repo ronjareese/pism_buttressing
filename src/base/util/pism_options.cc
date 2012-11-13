@@ -744,4 +744,13 @@ PetscErrorCode set_config_from_options(MPI_Comm /*com*/, NCConfigVariable &confi
   ierr = config.scalar_from_option("gamma_T", "gamma_T"); CHKERRQ(ierr);
   ierr = config.scalar_from_option("gamma_S", "gamma_S"); CHKERRQ(ierr);
   return 0;
+
+  // Check -no_gl_fix
+  ierr = PISMOptionsIsSet("-no_gl_fix", flag);  CHKERRQ(ierr);
+  if (flag) {
+    config.set_flag("avoid_gl_fix", true);
+  }
+
 }
+
+

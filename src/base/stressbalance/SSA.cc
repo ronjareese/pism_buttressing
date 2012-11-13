@@ -423,6 +423,7 @@ PetscErrorCode SSA::compute_driving_stress(IceModelVec2V &result) {
   const PetscScalar dx=grid.dx, dy=grid.dy;
 
   bool compute_surf_grad_inward_ssa = config.get_flag("compute_surf_grad_inward_ssa");
+  bool avoid_gl_fix = config.get_flag("avoid_gl_fix");
   PetscReal standard_gravity = config.get("standard_gravity"),
     ice_rho = config.get("ice_density");
   bool use_eta = (config.get_string("surface_gradient_method") == "eta");
@@ -464,62 +465,68 @@ PetscErrorCode SSA::compute_driving_stress(IceModelVec2V &result) {
             h_x = surface->diff_x_p(i,j);
             h_y = surface->diff_y_p(i,j);
           } else {
+	    if (avoid_gl_fix) {
+	      // Old scheme for driving stress computation at grounding line
+	      h_x = surface->diff_x(i,j);
+	      h_y = surface->diff_y(i,j);
+	    } else {
+	    
+	      // To compute the x-derivative we use
+	      // * away from the grounding line -- 2nd order centered difference
+	      //
+	      // * at the grounded cell near the grounding line -- 1st order
+	      //   one-sided difference using the grounded neighbor
+	      //
+	      // * at the floating cell near the grounding line -- 1st order
+	      //   one-sided difference using the floating neighbor
+	      //
+	      // All three cases can be combined by writing h_x as the weighted
+	      // average of one-sided differences, with weights of 0 if a finite
+	      // difference is not used and 1 if it is.
+	      //
+	      // The y derivative is handled the same way.
+	      //
+	      // FIXME: we need to fix the way we compute the driving stress at a
+	      // terminus that lies below the sea level. The surface elevation
+	      // (variable usurf, "surface" here) is set to max(sea_level, topg)
+	      // in ice-free areas, so the surface slope a terminus like this one
+	      // "sees" is lower than it should be.
 
-            // To compute the x-derivative we use
-            // * away from the grounding line -- 2nd order centered difference
-            //
-            // * at the grounded cell near the grounding line -- 1st order
-            //   one-sided difference using the grounded neighbor
-            //
-            // * at the floating cell near the grounding line -- 1st order
-            //   one-sided difference using the floating neighbor
-            //
-            // All three cases can be combined by writing h_x as the weighted
-            // average of one-sided differences, with weights of 0 if a finite
-            // difference is not used and 1 if it is.
-            //
-            // The y derivative is handled the same way.
-            //
-            // FIXME: we need to fix the way we compute the driving stress at a
-            // terminus that lies below the sea level. The surface elevation
-            // (variable usurf, "surface" here) is set to max(sea_level, topg)
-            // in ice-free areas, so the surface slope a terminus like this one
-            // "sees" is lower than it should be.
+	      // x-derivative
+	      {
+		double west = 1, east = 1;
+		if ((m.grounded(i,j) && m.ocean(i+1,j)) || (m.ocean(i,j) && m.grounded(i+1,j)) ||
+		    (m.icy(i,j) && m.ice_free(i+1,j)))
+		  east = 0;
+		if ((m.grounded(i,j) && m.ocean(i-1,j)) || (m.ocean(i,j) && m.grounded(i-1,j)) ||
+		    (m.icy(i,j) && m.ice_free(i-1,j)))
+		  west = 0;
 
-            // x-derivative
-            {
-              double west = 1, east = 1;
-              if ((m.grounded(i,j) && m.ocean(i+1,j)) || (m.ocean(i,j) && m.grounded(i+1,j)) ||
-                  (m.icy(i,j) && m.ice_free(i+1,j)))
-                east = 0;
-              if ((m.grounded(i,j) && m.ocean(i-1,j)) || (m.ocean(i,j) && m.grounded(i-1,j)) ||
-                  (m.icy(i,j) && m.ice_free(i-1,j)))
-                west = 0;
+		if (east + west > 0)
+		  h_x = 1.0 / (west + east) * (west * surface->diff_x_stagE(i-1,j) +
+					       east * surface->diff_x_stagE(i,j));
+		else
+		  h_x = 0.0;
+	      }
 
-              if (east + west > 0)
-                h_x = 1.0 / (west + east) * (west * surface->diff_x_stagE(i-1,j) +
-                                             east * surface->diff_x_stagE(i,j));
-              else
-                h_x = 0.0;
+	      // y-derivative
+	      {
+		double south = 1, north = 1;
+		if ((m.grounded(i,j) && m.ocean(i,j+1)) || (m.ocean(i,j) && m.grounded(i,j+1)) ||
+		    (m.icy(i,j) && m.ice_free(i,j+1)))
+		  north = 0;
+		if ((m.grounded(i,j) && m.ocean(i,j-1)) || (m.ocean(i,j) && m.grounded(i,j-1)) ||
+		    (m.icy(i,j) && m.ice_free(i,j-1)))
+		  south = 0;
+
+		if (north + south > 0)
+		  h_y = 1.0 / (south + north) * (south * surface->diff_y_stagN(i,j-1) +
+						 north * surface->diff_y_stagN(i,j));
+		else
+		  h_y = 0.0;
+	      }
             }
-
-            // y-derivative
-            {
-              double south = 1, north = 1;
-              if ((m.grounded(i,j) && m.ocean(i,j+1)) || (m.ocean(i,j) && m.grounded(i,j+1)) ||
-                  (m.icy(i,j) && m.ice_free(i,j+1)))
-                north = 0;
-              if ((m.grounded(i,j) && m.ocean(i,j-1)) || (m.ocean(i,j) && m.grounded(i,j-1)) ||
-                  (m.icy(i,j) && m.ice_free(i,j-1)))
-                south = 0;
-
-              if (north + south > 0)
-                h_y = 1.0 / (south + north) * (south * surface->diff_y_stagN(i,j-1) +
-                                               north * surface->diff_y_stagN(i,j));
-              else
-                h_y = 0.0;
-            }
-          }
+	  }
         }
 
         result(i,j).u = - pressure * h_x;

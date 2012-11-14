@@ -743,14 +743,11 @@ PetscErrorCode set_config_from_options(MPI_Comm /*com*/, NCConfigVariable &confi
   // Ocean model "th"
   ierr = config.scalar_from_option("gamma_T", "gamma_T"); CHKERRQ(ierr);
   ierr = config.scalar_from_option("gamma_S", "gamma_S"); CHKERRQ(ierr);
+
+  // gl fix
+  ierr = config.flag_from_option("no_gl_fix", "avoid_gl_fix"); CHKERRQ(ierr);
+
   return 0;
-
-  // Check -no_gl_fix
-  ierr = PISMOptionsIsSet("-no_gl_fix", flag);  CHKERRQ(ierr);
-  if (flag) {
-    config.set_flag("avoid_gl_fix", true);
-  }
-
 }
 
 

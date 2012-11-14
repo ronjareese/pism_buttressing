@@ -134,6 +134,12 @@ An explicit driving stress was specified instead and cannot be used.");
       "  using PISM-PIK calving-front stress boundary condition ...\n"); CHKERRQ(ierr);
   }
 
+  if (config.get_flag("avoid_gl_fix")) {
+    ierr = verbPrintf(2, grid.com, "  NOT using grounding line fix ...\n"); CHKERRQ(ierr);
+  } else {
+    ierr = verbPrintf(2, grid.com, "  using grounding line fix ...\n"); CHKERRQ(ierr);
+  }
+
   // option to save linear system in Matlab-readable ASCII format at end of each
   // numerical solution of SSA equations; can be given with or without filename prefix
   // (i.e. "-ssa_matlab " or "-ssa_matlab foo" are both legal; in former case get

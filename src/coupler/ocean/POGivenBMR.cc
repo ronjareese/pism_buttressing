@@ -61,37 +61,42 @@ PetscErrorCode POGivenBMR::init(PISMVars &vars) {
   }
 
 
-  // RTOPO-1
+  // adjustment of basal melt rates
   ierr = PISMOptionsIsSet("-adjust_bmr", adjust_bmr_set); CHKERRQ(ierr);
+
   if (adjust_bmr_set) { 
     ierr = verbPrintf(2, grid.com,
                       "* Sub-shelf mass flux will be adjusted according to reference ice shelf base elevation"); CHKERRQ(ierr);   
 
     ierr = find_pism_input(filename, regrid, start); CHKERRQ(ierr);
 
-    ierr = RTOPO1_shelfbaseelev.create(grid, "draft", false); CHKERRQ(ierr);
-    ierr = RTOPO1_shelfbaseelev.set_attrs("climate_state",
-					  "rtopo1 ice geometry",
+    ierr = ref_shelfbaseelev_array.create(grid, "draft", false); CHKERRQ(ierr);
+    ierr = ref_shelfbaseelev_array.set_attrs("climate_state",
+					  "reference ice geometry",
 					  "m",
 					  ""); CHKERRQ(ierr); // no CF standard_name ??
-    // ierr = RTOPO1_shelfbaseelev.set_glaciological_units("m");
-    // RTOPO1_shelfbaseelev.write_in_glaciological_units = true;
-    // RTOPO1_shelfbaseelev.time_independent = true;
 
-    // ierr = find_pism_input(rtopo1_filename, regrid, start); CHKERRQ(ierr);
-    
-    // read RTOPO-1 ice geometry from file
+    ref_openocean_shelfbaseelev = config.get("ref_openocean_shelfbaseelev");
+
+    ierr = PISMOptionsRealArray("-adjust_bmr", "ref_openocean_shelfbaseelev",
+				ref_openocean_shelfbaseelev, adjust_bmr_set); CHKERRQ(ierr);
+
+    ierr = verbPrintf(2, grid.com,
+                      "\n  Reference ice thickness for initially open ocean area: %f\n",
+		      ref_openocean_shelfbaseelev); CHKERRQ(ierr);
+
+    // read reference ice geometry from file
     ierr = verbPrintf(2, grid.com, 
-		      "\n  - Reading RTopo-1 data from '%s' ... \n",
+		      "\n  Reading reference ice geometry ('draft') from '%s' ... \n",
 		      filename.c_str()); CHKERRQ(ierr); 
     if (regrid) {
-      ierr = RTOPO1_shelfbaseelev.regrid(filename.c_str(), true); CHKERRQ(ierr); // fails if not found!
+      ierr = ref_shelfbaseelev_array.regrid(filename.c_str(), true); CHKERRQ(ierr); // fails if not found!
     } else {
-      ierr = RTOPO1_shelfbaseelev.read(filename.c_str(), start); CHKERRQ(ierr); // fails if not found!
+      ierr = ref_shelfbaseelev_array.read(filename.c_str(), start); CHKERRQ(ierr); // fails if not found!
     }
-    string rtopo1_history = "read from " + filename + "\n";
+    string ref_shelfbaseelev_history = "read from " + filename + "\n";
 
-    ierr = RTOPO1_shelfbaseelev.set_attr("history", rtopo1_history); CHKERRQ(ierr);
+    ierr = ref_shelfbaseelev_array.set_attr("history", ref_shelfbaseelev_history); CHKERRQ(ierr);
   }
 
   // delete lic;
@@ -144,45 +149,39 @@ PetscErrorCode POGivenBMR::shelf_base_mass_flux(IceModelVec2S &result) {
     sea_water_rho = config.get("sea_water_density");
 
   PetscScalar **H;
-  PetscReal dT_melt;
+  PetscReal dT_pmp;
   PetscReal C_BMR = 10.0; // m/(a*K)
-  PetscReal dH;
 
   ierr = ice_thickness->get_array(H);   CHKERRQ(ierr);
   ierr = mass_flux.begin_access(); CHKERRQ(ierr);
-  if (adjust_bmr_set) ierr = RTOPO1_shelfbaseelev.begin_access(); CHKERRQ(ierr);
+  if (adjust_bmr_set) ierr = ref_shelfbaseelev_array.begin_access(); CHKERRQ(ierr);
   ierr = result.begin_access(); CHKERRQ(ierr);
 
   for (PetscInt i=grid.xs; i<grid.xs+grid.xm; ++i) {
     for (PetscInt j=grid.ys; j<grid.ys+grid.ym; ++j) {
-      const PetscScalar PISM_shelfbaseelev = - ( ice_rho / sea_water_rho ) * H[i][j]; // FIXME issue #15
-      // temp is set to melting point at depth
-      // T_PISMmelt = T0 + beta_CC_grad * shelfbaseelev;  // base elev negative here so is below T0
+      const PetscScalar curr_shelfbaseelev = - ( ice_rho / sea_water_rho ) * H[i][j]; // FIXME issue #15
       if (adjust_bmr_set) {
-	dH = ( RTOPO1_shelfbaseelev(i,j) - PISM_shelfbaseelev );
-	dT_melt = beta_CC_grad * ( RTOPO1_shelfbaseelev(i,j) - PISM_shelfbaseelev );
-	// if (i==70 && j==100) {
-	//   ierr = verbPrintf(2, grid.com, "\n dH = %f", dH); CHKERRQ(ierr);
-	//   ierr = verbPrintf(2, grid.com, "\n PISM_shelfbaseelev = %f", PISM_shelfbaseelev); CHKERRQ(ierr);
-	//   ierr = verbPrintf(2, grid.com, "\n RTOPO1_shelfbaseelev = %f", RTOPO1_shelfbaseelev(i,j)); CHKERRQ(ierr);
-	//   ierr = verbPrintf(2, grid.com, "\n dT_melt = %f", dT_melt); CHKERRQ(ierr);
-	// }
-	// difference in shelf base elevation defines difference in pressure melting point
-	result(i,j) = mass_flux(i,j) + ( C_BMR * dT_melt ) / secpera;
+	// area where initially open ocean and hence no reference from data
+	if (ref_shelfbaseelev_array(i,j) == 9999) {
+	  ref_shelfbaseelev = ref_openocean_shelfbaseelev;
+	}
+	else {
+	  ref_shelfbaseelev = ref_shelfbaseelev_array(i,j);
+	}
+	// difference between reference and current shelf base elevation
+	// gives difference in pressure melting point (dT_pmp) which is
+	// converted to difference in mass flux by using C_BMR 
+	// (value motivated by empirical finding of rignot_jacobs02)
+	dT_pmp = beta_CC_grad * ( ref_shelfbaseelev - curr_shelfbaseelev );
+	result(i,j) = mass_flux(i,j) + ( C_BMR * dT_pmp ) / secpera;
       } else {
 	result(i,j) = mass_flux(i,j);
       }
-      // dT_melt = 1.0;
-      // dT_melt = T_RTopo1melt(i,j)-T_PISMmelt;
-      // mass_flux(i,j) = mass_flux(i,j) + C_BMR * dT_melt;
-
-      // result(i,j) = mass_flux(i,j) + 1.0/secpera; 
-      // result(i,j) = T0 + beta_CC_grad * shelfbaseelev;  // base elev negative here so is below T0
     }
   }
   ierr = ice_thickness->end_access(); CHKERRQ(ierr);
   ierr = mass_flux.end_access(); CHKERRQ(ierr);
-  if (adjust_bmr_set) ierr = RTOPO1_shelfbaseelev.begin_access(); CHKERRQ(ierr);
+  if (adjust_bmr_set) ierr = ref_shelfbaseelev_array.end_access(); CHKERRQ(ierr);
   ierr = result.end_access(); CHKERRQ(ierr);
   return 0;
 }

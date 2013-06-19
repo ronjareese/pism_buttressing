@@ -76,7 +76,8 @@ public:
 protected:
   string reference;
   bool adjust_bmr_set;
-  IceModelVec2S *ice_thickness, RTOPO1_shelfbaseelev;
+  PetscReal ref_openocean_shelfbaseelev;
+  IceModelVec2S *ice_thickness, ref_shelfbaseelev_array;
   NCSpatialVariable shelfbtemp, shelfbmassflux;
 };
 

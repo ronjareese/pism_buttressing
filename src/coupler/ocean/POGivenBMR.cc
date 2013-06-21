@@ -27,7 +27,7 @@ PetscErrorCode POGivenBMR::init(PISMVars &vars) {
   int start = -1;
 
   ierr = verbPrintf(2, grid.com,
-                    "* Initializing the ocean model 'BMR' reading sub-shelf mass flux from a file...\n"); CHKERRQ(ierr);
+                    "* Initializing the ocean model 'BMR' (which reads 'shelfbmassflux' from file) ...\n"); CHKERRQ(ierr);
 
   ierr = process_options(); CHKERRQ(ierr);
 
@@ -78,16 +78,16 @@ PetscErrorCode POGivenBMR::init(PISMVars &vars) {
 
     ref_openocean_shelfbaseelev = config.get("ref_openocean_shelfbaseelev");
 
-    ierr = PISMOptionsRealArray("-adjust_bmr", "ref_openocean_shelfbaseelev",
-				ref_openocean_shelfbaseelev, adjust_bmr_set); CHKERRQ(ierr);
+    ierr = PISMOptionsReal("-adjust_bmr", "ref_openocean_shelfbaseelev",
+			   ref_openocean_shelfbaseelev, adjust_bmr_set); CHKERRQ(ierr);
 
     ierr = verbPrintf(2, grid.com,
-                      "\n  Reference ice thickness for initially open ocean area: %f\n",
+                      "\n  - Reference ice thickness for initially open ocean area: %f\n",
 		      ref_openocean_shelfbaseelev); CHKERRQ(ierr);
 
     // read reference ice geometry from file
     ierr = verbPrintf(2, grid.com, 
-		      "\n  Reading reference ice geometry ('draft') from '%s' ... \n",
+		      "  - Reading reference ice geometry ('draft') from '%s' ... \n",
 		      filename.c_str()); CHKERRQ(ierr); 
     if (regrid) {
       ierr = ref_shelfbaseelev_array.regrid(filename.c_str(), true); CHKERRQ(ierr); // fails if not found!
@@ -121,15 +121,15 @@ PetscErrorCode POGivenBMR::shelf_base_temperature(IceModelVec2S &result) {
     ice_rho = config.get("ice_density"),
     sea_water_rho = config.get("sea_water_density");
 
-  // ierr = ice_thickness->begin_access();   CHKERRQ(ierr);
+  ierr = ice_thickness->begin_access();   CHKERRQ(ierr);
   PetscScalar **H;
   ierr = ice_thickness->get_array(H);   CHKERRQ(ierr);
   ierr = result.begin_access(); CHKERRQ(ierr);
 
   for (PetscInt i=grid.xs; i<grid.xs+grid.xm; ++i) {
     for (PetscInt j=grid.ys; j<grid.ys+grid.ym; ++j) {
-      // const PetscScalar shelfbaseelev = - ( ice_rho / sea_water_rho ) * (*ice_thickness)(i,j); // FIXME issue #15
-      const PetscScalar shelfbaseelev = - ( ice_rho / sea_water_rho ) * H[i][j]; // FIXME issue #15
+      const PetscScalar shelfbaseelev = - ( ice_rho / sea_water_rho ) * (*ice_thickness)(i,j); // FIXME issue #15
+      // const PetscScalar shelfbaseelev = - ( ice_rho / sea_water_rho ) * H[i][j]; // FIXME issue #15
       // temp is set to melting point at depth
       result(i,j) = T0 + beta_CC_grad * shelfbaseelev;  // base elev negative here so is below T0
     }
@@ -151,6 +151,7 @@ PetscErrorCode POGivenBMR::shelf_base_mass_flux(IceModelVec2S &result) {
   PetscScalar **H;
   PetscReal dT_pmp;
   PetscReal C_BMR = 10.0; // m/(a*K)
+  PetscReal ref_shelfbaseelev;
 
   ierr = ice_thickness->get_array(H);   CHKERRQ(ierr);
   ierr = mass_flux.begin_access(); CHKERRQ(ierr);
@@ -190,7 +191,7 @@ PetscErrorCode POGivenBMR::shelf_base_mass_flux(IceModelVec2S &result) {
 void POGivenBMR::add_vars_to_output(string keyword, map<string,NCSpatialVariable> &result) {
   if (keyword == "medium" || keyword == "big") {
   result["shelfbtemp"] = shelfbtemp;
-  // result["shelfbmassflux"] = shelfbmassflux;
+  result["shelfbmassflux"] = shelfbmassflux;
   // result["shelfbmassflux"] = mass_flux;
   }
 }
@@ -203,10 +204,10 @@ PetscErrorCode POGivenBMR::define_variables(set<string> vars, const PIO &nc,
     ierr = shelfbtemp.define(nc, nctype, true); CHKERRQ(ierr);
   }
 
-  // if (set_contains(vars, "shelfbmassflux")) {
-  //   // ierr = mass_flux.define(nc, nctype, true); CHKERRQ(ierr);
-  //   ierr = shelfbmassflux.define(nc, nctype, true); CHKERRQ(ierr);
-  // }
+  if (set_contains(vars, "shelfbmassflux")) {
+    // ierr = mass_flux.define(nc, nctype, true); CHKERRQ(ierr);
+    ierr = shelfbmassflux.define(nc, nctype, true); CHKERRQ(ierr);
+  }
 
   return 0;
 }
@@ -225,17 +226,17 @@ PetscErrorCode POGivenBMR::write_variables(set<string> vars, string filename) {
     ierr = tmp.write(filename.c_str()); CHKERRQ(ierr);
   }
 
-  // if (set_contains(vars, "shelfbmassflux")) {
-  //   if (!tmp.was_created()) {
-  //     ierr = tmp.create(grid, "tmp", false); CHKERRQ(ierr);
-  //   }
+  if (set_contains(vars, "shelfbmassflux")) {
+    if (!tmp.was_created()) {
+      ierr = tmp.create(grid, "tmp", false); CHKERRQ(ierr);
+    }
 
-  //   ierr = tmp.set_metadata(mass_flux, 0); CHKERRQ(ierr);
-  //   ierr = tmp.set_metadata(shelfbmassflux, 0); CHKERRQ(ierr);
-  //   tmp.write_in_glaciological_units = true;
-  //   ierr = shelf_base_mass_flux(tmp); CHKERRQ(ierr);
-  //   ierr = tmp.write(filename.c_str()); CHKERRQ(ierr);
-  // }
+    // ierr = tmp.set_metadata(mass_flux, 0); CHKERRQ(ierr);
+    ierr = tmp.set_metadata(shelfbmassflux, 0); CHKERRQ(ierr);
+    tmp.write_in_glaciological_units = true;
+    ierr = shelf_base_mass_flux(tmp); CHKERRQ(ierr);
+    ierr = tmp.write(filename.c_str()); CHKERRQ(ierr);
+  }
 
   return 0;
 }

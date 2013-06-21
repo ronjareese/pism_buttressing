@@ -277,7 +277,7 @@ netcdf pism_config {
     pism_config:calving_at_thickness = 50.0;
     pism_config:calving_at_thickness_doc = "m; When terminal ice thickness of floating ice shelf is less than this threshold, it will be calved off.";
 
-    pism_Config:ref_openocean_shelfbaseelev = 300.0;
+    pism_config:ref_openocean_shelfbaseelev = 300.0;
     pism_config:ref_openocean_shelfbaseelev_doc = "m; Reference thickness of ice shelf in area which was initially open ocean.";
 
     pism_config:nuBedrock = 5.0e15;

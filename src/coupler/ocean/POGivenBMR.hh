@@ -28,7 +28,6 @@ public:
   POGivenBMR(IceGrid &g, const NCConfigVariable &conf)
     : PGivenBMR<POModifier,PISMOceanModel>(g, conf, NULL)
   {
-    // temp_name       = "shelfbtemp";
     mass_flux_name  = "shelfbmassflux";
     option_prefix   = "-ocean_bmr";
 
@@ -43,12 +42,6 @@ public:
     shelfbmassflux.set_string("long_name",
     			      "ice mass flux from ice shelf base (positive flux is loss from ice shelf)");
     shelfbtemp.set_units("m s-1"); 
-
-    // shelfbmassflux.init_2d("shelfbmassflux", g);
-    // shelfbmassflux.set_string("pism_intent", "climate_state");
-    // shelfbmassflux.set_string("long_name",
-    // 			      "ice mass flux from ice shelf base (positive flux is loss from ice shelf)");
-    // shelfbtemp.set_units("m s-1"); 
   }
 
   virtual ~POGivenBMR() {}
@@ -65,9 +58,6 @@ public:
 
   virtual PetscErrorCode shelf_base_mass_flux(IceModelVec2S &result);
 
-  // added
-
-  // virtual void add_vars_to_output(string keyword, map<string,IceModelVec2S> &result);
   virtual void add_vars_to_output(string keyword, map<string,NCSpatialVariable> &result);
   virtual PetscErrorCode define_variables(set<string> vars, const PIO &nc,
   					  PISM_IO_Type nctype);
@@ -76,7 +66,7 @@ public:
 protected:
   string reference;
   bool adjust_bmr_set;
-  PetscReal ref_openocean_shelfbaseelev;
+  PetscReal ref_openocean_shelfthk;
   IceModelVec2S *ice_thickness, ref_shelfbaseelev_array;
   NCSpatialVariable shelfbtemp, shelfbmassflux;
 };

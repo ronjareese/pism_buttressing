@@ -59,10 +59,11 @@ PetscErrorCode POGivenBMR::init(PISMVars &vars) {
     ierr = find_pism_input(filename, regrid, start); CHKERRQ(ierr);
 
     ierr = ref_shelfbaseelev_array.create(grid, "draft", false); CHKERRQ(ierr);
-    ierr = ref_shelfbaseelev_array.set_attrs("climate_state",
+    ierr = ref_shelfbaseelev_array.set_attrs("model_state",
 					  "reference ice geometry",
 					  "m",
 					  ""); CHKERRQ(ierr); // no CF standard_name ??
+    // ierr = variables.add(ref_shelfbaseelev_array); CHKERRQ(ierr); Would have to be done in "iceModel.cc" 
 
     ref_openocean_shelfthk = config.get("ref_openocean_shelfthk");
 
@@ -217,6 +218,10 @@ PetscErrorCode POGivenBMR::write_variables(set<string> vars, string filename) {
     tmp.write_in_glaciological_units = true;
     ierr = shelf_base_mass_flux(tmp); CHKERRQ(ierr);
     ierr = tmp.write(filename.c_str()); CHKERRQ(ierr);
+  }
+
+  if (adjust_bmr_set) {
+    ierr = ref_shelfbaseelev_array.write(filename.c_str()); CHKERRQ(ierr);
   }
 
   return 0;

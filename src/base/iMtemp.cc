@@ -206,6 +206,11 @@ PetscErrorCode IceModel::temperatureStep(PetscScalar* vertSacrCount, PetscScalar
       SETERRQ(grid.com, 3,"PISM ERROR: PISMBedThermalUnit* btu == PETSC_NULL in temperatureStep()");
     }
 
+    const bool sub_gl = config.get_flag("sub_groundingline");
+    if (sub_gl){
+      ierr = gl_mask.begin_access(); CHKERRQ(ierr);
+    }
+
     ierr = artm.begin_access(); CHKERRQ(ierr);
     ierr = shelfbmassflux.begin_access(); CHKERRQ(ierr);
     ierr = shelfbtemp.begin_access(); CHKERRQ(ierr);
@@ -392,11 +397,17 @@ PetscErrorCode IceModel::temperatureStep(PetscScalar* vertSacrCount, PetscScalar
           bwatnew -= bwat_decay_rate * dt_TempAge;
           bwat[i][j] = PetscMin(bwat_max, PetscMax(bwatnew, 0.0));
         }
-
+	if (sub_gl) {
+	  basalMeltRate[i][j] = (1.0 - gl_mask(i,j)) * shelfbmassflux(i,j) + gl_mask(i,j) * basalMeltRate[i][j];
+	}
     }
   }
 
   if (myLowTempCount > maxLowTempCount) { SETERRQ(grid.com, 1,"too many low temps"); }
+
+  if (sub_gl){
+    ierr = gl_mask.end_access(); CHKERRQ(ierr);
+   }
 
   ierr = vH.end_access(); CHKERRQ(ierr);
   ierr = vMask.end_access(); CHKERRQ(ierr);

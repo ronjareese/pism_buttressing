@@ -239,12 +239,23 @@ PetscErrorCode IceModel::createVecs() {
   }
   
   if (config.get_flag("sub_groundingline")) {
-    ierr = gl_mask.create(grid, "gl_mask", false); CHKERRQ(ierr);
+    ierr = gl_mask.create(grid, "gl_mask", true, 2); CHKERRQ(ierr);
     ierr = gl_mask.set_attrs("internal",
                                      "mask specifying grounding line position",
                                      "", ""); CHKERRQ(ierr);
     ierr = variables.add(gl_mask); CHKERRQ(ierr);
 
+    ierr = gl_mask_x.create(grid, "gl_mask_x", true, 2); CHKERRQ(ierr);
+    ierr = gl_mask_x.set_attrs("internal",
+                                     "mask specifying grounding line position in x-direction",
+                                     "", ""); CHKERRQ(ierr);
+    ierr = variables.add(gl_mask_x); CHKERRQ(ierr);
+
+    ierr = gl_mask_y.create(grid, "gl_mask_y", true, 2); CHKERRQ(ierr);
+    ierr = gl_mask_y.set_attrs("internal",
+                                     "mask specifying grounding line position in y-direction",
+                                     "", ""); CHKERRQ(ierr);
+    ierr = variables.add(gl_mask_y); CHKERRQ(ierr);
   }
 
   // grounded_dragging_floating integer mask

@@ -241,7 +241,9 @@ protected:
     vIcebergMask, //!< mask for iceberg identification
 
     vBCMask; //!< mask to determine Dirichlet boundary locations
-  IceModelVec2S gl_mask; //!< mask to determine grounding line position
+  IceModelVec2S gl_mask, //!< mask to determine grounding line position
+    gl_mask_x, //!< mask to determine grounding line position in x-direction
+    gl_mask_y; //!< mask to determine grounding line position in y-direction
  
   IceModelVec2V vBCvel; //!< Dirichlet boundary velocities
 

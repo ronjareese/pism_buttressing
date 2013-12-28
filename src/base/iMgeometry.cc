@@ -859,8 +859,10 @@ PetscErrorCode IceModel::sub_gl_position() {
   string subgltype = config.get_string("subgl_type");
 
   IceModelVec2S gl_mask_new = vWork2d[0];
-  IceModelVec2S gl_mask_unground_x = vWork2d[0];
-  IceModelVec2S gl_mask_unground_y = vWork2d[0];
+  IceModelVec2S gl_mask_x_new = vWork2d[1];
+  IceModelVec2S gl_mask_y_new = vWork2d[2];
+  // IceModelVec2S gl_mask_unground_x = vWork2d[0];
+  // IceModelVec2S gl_mask_unground_y = vWork2d[0];
   //ierr = gl_mask.copy_to(gl_mask_new); CHKERRQ(ierr);
   
   ierr =    vH.begin_access(); CHKERRQ(ierr);
@@ -868,25 +870,33 @@ PetscErrorCode IceModel::sub_gl_position() {
   ierr = vMask.begin_access(); CHKERRQ(ierr);
   ierr = gl_mask.begin_access(); CHKERRQ(ierr);
   ierr = gl_mask_new.begin_access(); CHKERRQ(ierr);
-  ierr = gl_mask_unground_x.begin_access(); CHKERRQ(ierr);
-  ierr = gl_mask_unground_y.begin_access(); CHKERRQ(ierr);
+  ierr = gl_mask_x.begin_access(); CHKERRQ(ierr);
+  ierr = gl_mask_x_new.begin_access(); CHKERRQ(ierr);
+  ierr = gl_mask_y.begin_access(); CHKERRQ(ierr);
+  ierr = gl_mask_y_new.begin_access(); CHKERRQ(ierr);
+
+  // ierr = gl_mask_unground_x.begin_access(); CHKERRQ(ierr);
+  // ierr = gl_mask_unground_y.begin_access(); CHKERRQ(ierr);
   
   ierr = gl_mask_new.set(0.0); CHKERRQ(ierr);
+  ierr = gl_mask_x_new.set(0.0); CHKERRQ(ierr);
+  ierr = gl_mask_y_new.set(0.0); CHKERRQ(ierr);
   //gl_mask_unground_x/y state fraction of ungrounding in each, hence start with 1.0
   //only used for floating or ice free regions
-  ierr = gl_mask_unground_x.set(1.0); CHKERRQ(ierr);
-  ierr = gl_mask_unground_y.set(1.0); CHKERRQ(ierr);
+  // ierr = gl_mask_unground_x.set(1.0); CHKERRQ(ierr);
+  // ierr = gl_mask_unground_y.set(1.0); CHKERRQ(ierr);
 
   for (PetscInt i = grid.xs; i < grid.xs + grid.xm; ++i) {
     for (PetscInt j = grid.ys; j < grid.ys + grid.ym; ++j) { 
       
-      PetscReal xpart1=0.0, xpart2=0.0, interpol=0.0, gl_mask_x=0.0, gl_mask_y=0.0, interpolPA=0.0; 
+      PetscReal xpart1=0.0, xpart2=0.0, interpol=0.0, interpolPA=0.0, gl_mask_gr_x=1.0, gl_mask_gr_y=1.0, gl_mask_fl_x=1.0, gl_mask_fl_y=1.0; 
       
-      if (mask.grounded(i, j)) { 
-        gl_mask_x=1.0;
-        gl_mask_y=1.0;
-      }
-      //if (mask.grounded(i, j) && mask.floating_ice(i+1, j)) {
+      // if (mask.grounded(i, j)) { 
+      //   gl_mask_gr_x=1.0;
+      //   gl_mask_gr_y=1.0;
+      // }
+
+      // grounded part
       if (mask.grounded(i, j) && (mask.floating_ice(i+1, j) || mask.ice_free_ocean(i+1, j))) {
         xpart1=vbed(i, j)-sea_level+vH(i, j)*rhoq;
         xpart2=vbed(i+1, j)-sea_level+vH(i+1, j)*rhoq;
@@ -900,13 +910,14 @@ PetscErrorCode IceModel::sub_gl_position() {
         interpol=interpolPA;       
         }
         if (interpol<0.5)
-          gl_mask_x+=(interpol-0.5);
-        else
-	  gl_mask_unground_x(i+1,j)-=(interpol-0.5);
-	  
-        ierr = verbPrintf(4, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
+          gl_mask_gr_x+=(interpol-0.5);
+        // else
+	//   gl_mask_unground_x(i+1,j)-=(interpol-0.5);
+
+	ierr = PetscPrintf(PETSC_COMM_WORLD,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
+        // ierr = verbPrintf(3, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
       }
-      //if (mask.grounded(i, j) && mask.floating_ice(i-1, j)){
+
       if (mask.grounded(i, j) && (mask.floating_ice(i-1, j) || mask.ice_free_ocean(i-1, j))){
         xpart1=vbed(i, j)-sea_level+vH(i, j)*rhoq;
         xpart2=vbed(i-1, j)-sea_level+vH(i-1, j)*rhoq;
@@ -920,14 +931,13 @@ PetscErrorCode IceModel::sub_gl_position() {
         interpol=interpolPA;       
         }
         if (interpol<0.5)
-          gl_mask_x+=(interpol-0.5);
-        else{
-          //if (vH(i-1, j)>0.0)
-            gl_mask_unground_x(i-1,j)-=(interpol-0.5);
-        }  
-        ierr = verbPrintf(4, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
+          gl_mask_gr_x+=(interpol-0.5);
+        // else{
+	//   gl_mask_unground_x(i-1,j)-=(interpol-0.5);
+        // }  
+        ierr = verbPrintf(3, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
       }     
-      //if (mask.grounded(i, j) && mask.floating_ice(i, j+1)){
+
       if (mask.grounded(i, j) && (mask.floating_ice(i, j+1) || mask.ice_free_ocean(i, j+1))){
         xpart1=vbed(i, j)-sea_level+vH(i, j)*rhoq;
         xpart2=vbed(i, j+1)-sea_level+vH(i, j+1)*rhoq;
@@ -941,13 +951,13 @@ PetscErrorCode IceModel::sub_gl_position() {
         interpol=interpolPA;       
         }
         if (interpol<0.5)
-          gl_mask_y+=(interpol-0.5);
-        else
-          gl_mask_unground_y(i,j+1)-=(interpol-0.5);
+          gl_mask_gr_y+=(interpol-0.5);
+        // else
+        //   gl_mask_unground_y(i,j+1)-=(interpol-0.5);
           
-       ierr = verbPrintf(4, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
+       ierr = verbPrintf(3, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
       }
-      //if (mask.grounded(i, j) && mask.floating_ice(i, j-1)){
+
       if (mask.grounded(i, j) && (mask.floating_ice(i, j-1) || mask.ice_free_ocean(i, j-1))){
         xpart1=vbed(i, j)-sea_level+vH(i, j)*rhoq;
         xpart2=vbed(i, j-1)-sea_level+vH(i, j-1)*rhoq;
@@ -961,37 +971,134 @@ PetscErrorCode IceModel::sub_gl_position() {
         interpol=interpolPA;       
         }
         if (interpol<0.5)
-          gl_mask_y+=(interpol-0.5);
-        else
-          gl_mask_unground_y(i,j-1)-=(interpol-0.5);
+          gl_mask_gr_y+=(interpol-0.5);
+        // else
+        //   gl_mask_unground_y(i,j-1)-=(interpol-0.5);
           
-        ierr = verbPrintf(4, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
+        ierr = verbPrintf(3, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
       }
-      if (mask.grounded(i, j))
-        gl_mask_new(i,j) = gl_mask_x * gl_mask_y;
+
+      if (mask.grounded(i, j)) {
+	gl_mask_x_new(i,j) = gl_mask_gr_x;
+	gl_mask_y_new(i,j) = gl_mask_gr_y;
+        gl_mask_new(i,j) = gl_mask_gr_x * gl_mask_gr_y;
+      }
+
+      // floating part
+      // if (mask.grounded(i-1, j) && (mask.floating_ice(i, j) || mask.ice_free_ocean(i, j))) {
+      if (mask.grounded(i-1, j) && mask.floating_ice(i, j)) {
+        xpart1=vbed(i-1, j)-sea_level+vH(i-1, j)*rhoq;
+        xpart2=vbed(i, j)-sea_level+vH(i, j)*rhoq;
+        interpol=xpart1/(xpart1-xpart2);
+        if (subgltype=="PA") {
+        interpolPA = (vH(i, j)*vH(i-1, j)*rhoq + vbed(i-1, j)) / (vH(i, j)*vbed(i-1, j) - vbed(i, j)*vH(i-1, j)); //Pattyn
+        if (interpolPA>1.0)
+          interpolPA=1.0;
+        else if (interpolPA<0.0)
+          interpolPA=0.0;
+        interpol=interpolPA;       
+        }
+        if (interpol>=0.5)
+	  gl_mask_fl_x-=(interpol-0.5);
+
+	ierr = PetscPrintf(PETSC_COMM_WORLD,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);	  
+        // ierr = verbPrintf(3, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
+      }
+
+      if (mask.grounded(i+1, j) && mask.floating_ice(i, j)){
+        xpart1=vbed(i+1, j)-sea_level+vH(i+1, j)*rhoq;
+        xpart2=vbed(i, j)-sea_level+vH(i, j)*rhoq;
+        interpol=xpart1/(xpart1-xpart2);
+        if (subgltype=="PA") {
+        interpolPA = (vH(i, j)*vH(i+1, j)*rhoq + vbed(i+1, j)) / (vH(i, j)*vbed(i+1, j) - vbed(i, j)*vH(i+1, j)); //Pattyn
+        if (interpolPA>1.0)
+          interpolPA=1.0;
+        else if (interpolPA<0.0)
+          interpolPA=0.0;
+        interpol=interpolPA;       
+        }
+        if (interpol>=0.5)
+          gl_mask_fl_x-=(interpol-0.5);
+
+        ierr = verbPrintf(3, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
+      }     
+
+      if (mask.grounded(i, j-1) && mask.floating_ice(i, j)){
+        xpart1=vbed(i, j-1)-sea_level+vH(i, j-1)*rhoq;
+        xpart2=vbed(i, j)-sea_level+vH(i, j)*rhoq;
+        interpol=xpart1/(xpart1-xpart2);
+        if (subgltype=="PA") {
+        interpolPA = (vH(i, j)*vH(i, j-1)*rhoq + vbed(i, j-1)) / (vH(i, j)*vbed(i, j-1) - vbed(i, j)*vH(i, j-1)); //Pattyn
+        if (interpolPA>1.0)
+          interpolPA=1.0;
+        else if (interpolPA<0.0)
+          interpolPA=0.0;
+        interpol=interpolPA;       
+        }
+        if (interpol>=0.5)
+          gl_mask_fl_y-=(interpol-0.5);
+          
+       ierr = verbPrintf(3, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
+      }
+
+      if (mask.grounded(i, j+1) && mask.floating_ice(i, j)){
+        xpart1=vbed(i, j+1)-sea_level+vH(i, j+1)*rhoq;
+        xpart2=vbed(i, j)-sea_level+vH(i, j)*rhoq;
+        interpol=xpart1/(xpart1-xpart2);
+        if (subgltype=="PA") {
+        interpolPA = (vH(i, j)*vH(i, j+1)*rhoq + vbed(i, j+1)) / (vH(i, j)*vbed(i, j+1) - vbed(i, j)*vH(i, j+1)); //Pattyn 
+        if (interpolPA>1.0)
+          interpolPA=1.0;
+        else if (interpolPA<0.0)
+          interpolPA=0.0;
+        interpol=interpolPA;       
+        }
+        if (interpol>=0.5)
+          gl_mask_fl_y-=(interpol-0.5);
+          
+        ierr = verbPrintf(3, grid.com,"!!! PISM_INFO: type=%s, h1=%f, h2=%f, interpol=%f at i=%d, j=%d\n",subgltype.c_str(),xpart1,xpart2,interpol,i,j); CHKERRQ(ierr);
+      }
+
+      // if (mask.floating_ice(i, j) || mask.ice_free_ocean(i,j))
+      if (mask.floating_ice(i, j)) {
+	gl_mask_x_new(i,j) = 1.0 - gl_mask_fl_x;
+	gl_mask_y_new(i,j) = 1.0 - gl_mask_fl_y;
+        gl_mask_new(i,j) = 1.0 - gl_mask_fl_x * gl_mask_fl_y;
+      }
+
     } // inner for loop (j)
   } // outer for loop (i)
 
-  for (PetscInt i = grid.xs; i < grid.xs + grid.xm; ++i) {
-    for (PetscInt j = grid.ys; j < grid.ys + grid.ym; ++j) { 
-      if (mask.floating_ice(i,j) || mask.ice_free_ocean(i,j))
-	gl_mask_new(i,j) = 1.0 - gl_mask_unground_x(i,j) * gl_mask_unground_y(i,j);
-    }
-  }
+  // for (PetscInt i = grid.xs; i < grid.xs + grid.xm; ++i) {
+  //   for (PetscInt j = grid.ys; j < grid.ys + grid.ym; ++j) { 
+  //     if (mask.floating_ice(i,j) || mask.ice_free_ocean(i,j))
+  // 	gl_mask_new(i,j) = 1.0 - gl_mask_unground_x(i,j) * gl_mask_unground_y(i,j);
+  //   }
+  // }
 
   ierr =         vH.end_access(); CHKERRQ(ierr);
   ierr =       vbed.end_access(); CHKERRQ(ierr);
   ierr =      vMask.end_access(); CHKERRQ(ierr);
   ierr =     gl_mask.end_access(); CHKERRQ(ierr);
   ierr =     gl_mask_new.end_access(); CHKERRQ(ierr);
-  ierr =     gl_mask_unground_x.end_access(); CHKERRQ(ierr);
-  ierr =     gl_mask_unground_y.end_access(); CHKERRQ(ierr);
+  ierr =     gl_mask_x.end_access(); CHKERRQ(ierr);
+  ierr =     gl_mask_x_new.end_access(); CHKERRQ(ierr);
+  ierr =     gl_mask_y.end_access(); CHKERRQ(ierr);
+  ierr =     gl_mask_y_new.end_access(); CHKERRQ(ierr);
+  // ierr =     gl_mask_unground_x.end_access(); CHKERRQ(ierr);
+  // ierr =     gl_mask_unground_y.end_access(); CHKERRQ(ierr);
+
+  ierr = vH.beginGhostComm(); CHKERRQ(ierr);
+  ierr = vH.endGhostComm(); CHKERRQ(ierr);
+  ierr = vbed.beginGhostComm(); CHKERRQ(ierr);
+  ierr = vbed.endGhostComm(); CHKERRQ(ierr);
+  ierr = vMask.beginGhostComm(); CHKERRQ(ierr);
+  ierr = vMask.endGhostComm(); CHKERRQ(ierr);
   
   // finally copy gl_mask_new into gl_mask and communicate ghosted values
-  //ierr = gl_mask_new.beginGhostComm(gl_mask); CHKERRQ(ierr);
-  //ierr = gl_mask_new.endGhostComm(gl_mask); CHKERRQ(ierr);
-  
   ierr = gl_mask_new.copy_to(gl_mask); CHKERRQ(ierr);
+  ierr = gl_mask_x_new.copy_to(gl_mask_x); CHKERRQ(ierr);
+  ierr = gl_mask_y_new.copy_to(gl_mask_y); CHKERRQ(ierr);
 
   return 0;
 }

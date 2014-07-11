@@ -1,4 +1,4 @@
-// Copyright (C) 2004-2012 Jed Brown, Ed Bueler and Constantine Khroulev
+// Copyright (C) 2004-2012, 2014 Jed Brown, Ed Bueler and Constantine Khroulev
 //
 // This file is part of PISM.
 //
@@ -281,6 +281,18 @@ PetscErrorCode IceModel::check_maximum_thickness() {
     ierr = verbPrintf(2, grid.com,
 		      "NOTE: Further snapshots will be saved to '%s'...\n",
 		      snapshots_filename.c_str()); CHKERRQ(ierr);
+  }
+
+  if (save_extra && (not split_extra)) {
+    char tmp[20];
+    snprintf(tmp, 20, "%d", grid.Mz);
+
+    extra_filename = pism_filename_add_suffix(extra_filename, "-Mz", tmp);
+    extra_file_is_ready = false;
+
+    ierr = verbPrintf(2, grid.com,
+                      "NOTE: Further spatially-variable time-series will be saved to '%s'...\n",
+                      extra_filename.c_str()); CHKERRQ(ierr);
   }
 
   return 0;

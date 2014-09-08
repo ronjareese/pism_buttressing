@@ -124,6 +124,39 @@ PetscErrorCode POGivenTH::init(PISMVars &vars) {
     ierr = update(grid.time->current(), 0); CHKERRQ(ierr); // dt is irrelevant
   }
 
+
+  // modified by Ricarda
+  ierr = PISMOptionsIsSet("-ocean_th_deltaT", ocean_th_deltaT_set); CHKERRQ(ierr);
+  
+  if (ocean_th_deltaT_set) {
+      bool delta_T_set;
+      //bool delta_T_factor_set;
+      string delta_T_file;
+      //PetscScalar delta_T_factor;
+  
+      ierr = PISMOptionsString("-ocean_th_deltaT",
+                               "Specifies the ocean temperature offsets file to use with -ocean_th_deltaT",
+                               delta_T_file, delta_T_set); CHKERRQ(ierr);
+                               
+      //ierr = PISMOptionsReal(PETSC_NULL,"-ocean_th_factor",delta_T_factor, delta_T_factor_set); CHKERRQ(ierr);
+                                                        
+  
+      ierr = verbPrintf(2, grid.com, 
+                        "  reading delta_T data from forcing file %s for -ocean_th_deltaT actions ...\n",
+                        delta_T_file.c_str());  CHKERRQ(ierr);
+  
+      delta_T = new Timeseries(grid.com, grid.rank, "delta_T",
+                               grid.config.get_string("time_dimension_name"));
+      ierr = delta_T->set_units("Kelvin", ""); CHKERRQ(ierr);
+      ierr = delta_T->set_dimension_units(grid.time->units(), ""); CHKERRQ(ierr);
+      ierr = delta_T->set_attr("long_name", "ocean temperature offsets");
+      CHKERRQ(ierr);
+      ierr = delta_T->read(delta_T_file, grid.time->use_reference_date()); CHKERRQ(ierr);
+  }
+  
+
+
+
   return 0;
 }
 
@@ -189,17 +222,28 @@ PetscErrorCode POGivenTH::calculate_boundlayer_temp_and_salt() {
   ierr = mass_flux.begin_access(); CHKERRQ(ierr); // NOTE salinity instead of mass_flux
   ierr = salinity_boundlayer.begin_access(); CHKERRQ(ierr);
   ierr = temp_boundlayer.begin_access(); CHKERRQ(ierr);
+  
+  bool delta_T_factor_set;
+  PetscReal delta_T_factor=1.0;
+  if (ocean_th_deltaT_set) {
+    ierr = PISMOptionsReal("-ocean_th_factor","-ocean_th_factor",delta_T_factor, delta_T_factor_set); CHKERRQ(ierr);
+  }
+  
 
   for (PetscInt i=grid.xs; i<grid.xs+grid.xm; ++i) {
     for (PetscInt j=grid.ys; j<grid.ys+grid.ym; ++j) {
       const PetscScalar shelfbaseelev = -(rhoi/rhow) * (*ice_thickness)(i,j); // FIXME issue #15
+      
+      // modified by Ricarda for the thetao output
+      if ((delta_T != NULL) && ocean_th_deltaT_set) {
+        temp(i,j) = temp(i,j) + (*delta_T)(t + 0.5 * dt) / delta_T_factor;
+      }    
+      
       PetscReal thetao    = temp(i,j) - 273.15; // to degC
       PetscReal sal_ocean = mass_flux(i,j); //NOTE salinity instead of mass_flux
       PetscReal press = rhow * -1. * shelfbaseelev/1000. + reference_pressure; //NOTE Unit??
       potit(sal_ocean, thetao, press, reference_pressure, temp_insitu);
 
-      //ierr = verbPrintf(2, grid.com,
-                    //"shelfbaseelev=%e, topg=%e \n", shelfbaseelev, (*topg)(i,j)); CHKERRQ(ierr);
 
       // ensure that melting at grounded cells do not yield too large pressure
       PetscReal zice = -1*PetscMin(PetscAbs(shelfbaseelev),PetscAbs((*topg)(i,j)));

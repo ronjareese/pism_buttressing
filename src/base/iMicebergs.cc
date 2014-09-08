@@ -148,7 +148,7 @@ PetscErrorCode IceModel::findIceBergCandidates() {
                                        vIcebergMask(i - 1, j + 1) == ICEBERGMASK_ICEBERG_CAND ||
                                        vIcebergMask(i - 1, j - 1) == ICEBERGMASK_ICEBERG_CAND);
 
-        if (M.grounded(i, j) && neighbor_is_candidate)
+        if (M.grounded_ice(i, j) && neighbor_is_candidate)
           vIcebergMask(i, j) = ICEBERGMASK_STOP_ATTACHED;
         else if (M.ice_free_ocean(i, j) && neighbor_is_candidate)
           vIcebergMask(i, j) = ICEBERGMASK_STOP_OCEAN;

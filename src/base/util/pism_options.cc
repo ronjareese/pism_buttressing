@@ -711,7 +711,7 @@ PetscErrorCode set_config_from_options(MPI_Comm /*com*/, NCConfigVariable &confi
 
   // Shortcuts
 
-  if (getVerbosityLevel() > 2)  config.set_flag("verbose_pik_messages", true);
+  if (getVerbosityLevel() > 3)  config.set_flag("verbose_pik_messages", true);
 
   // option "-pik" turns on a suite of PISMPIK effects (but not -eigen_calving)
   ierr = PISMOptionsIsSet("-pik", "enable suite of PISM-PIK mechanisms", flag); CHKERRQ(ierr);

@@ -22,6 +22,10 @@
 #include "PGivenClimate.hh"
 #include "POModifier.hh"
 
+//modified by Ricarda
+#include "Timeseries.hh"
+
+
 class POGivenTH : public PGivenClimate<POModifier,PISMOceanModel>
 {
 public:
@@ -31,6 +35,11 @@ public:
     temp_name       = "thetao";
     mass_flux_name  = "salinity"; //NOTE: salinity_name instead of mass_flux_name
     option_prefix   = "-ocean_th";
+    
+    //modified by Ricarda
+    ocean_th_deltaT_set = false;
+    delta_T = NULL;
+    
   }
 
   virtual ~POGivenTH() {}
@@ -50,13 +59,13 @@ public:
   virtual PetscErrorCode shelf_base_mass_flux(IceModelVec2S &result);
 
   virtual PetscErrorCode shelf_base_temp_salinity_3eqn(vector<double> gat_array, PetscInt i, PetscInt j,
-						       PetscReal gas, PetscReal sal_ocean,
-						       PetscReal temp_insitu, PetscReal zice,
-						       PetscReal &temp_base, PetscReal &sal_base);
+          PetscReal gas, PetscReal sal_ocean,
+          PetscReal temp_insitu, PetscReal zice,
+          PetscReal &temp_base, PetscReal &sal_base);
 
   virtual PetscErrorCode compute_meltrate_3eqn(vector<double> gat_array, PetscReal gas, PetscReal rhow,
-					       PetscReal rhoi, PetscReal temp_base, PetscReal sal_base,
-					       PetscReal sal_ocean, PetscReal &meltrate);
+          PetscReal rhoi, PetscReal temp_base, PetscReal sal_base,
+          PetscReal sal_ocean, PetscReal &meltrate);
 
   virtual PetscErrorCode adlprt(PetscReal salz, PetscReal temp_insitu, PetscReal pres, PetscReal &adlprt_out);
   virtual PetscErrorCode pttmpr(PetscReal salz, PetscReal temp_insitu, PetscReal pres,PetscReal rfpres, PetscReal &thetao);
@@ -64,6 +73,11 @@ public:
   protected:
     IceModelVec2S *ice_thickness, *topg; // is not owned by this class
     IceModelVec2S temp_boundlayer, salinity_boundlayer;
+    
+    //modified by Ricarda
+    bool ocean_th_deltaT_set;
+    Timeseries *delta_T;
+
 
     vector<double> gat_array;
     PetscReal gas;

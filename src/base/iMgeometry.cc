@@ -71,6 +71,8 @@ PetscErrorCode IceModel::update_mask() {
   GeometryCalculator gc(sea_level, config);
   MaskQuery mask(vMask);
 
+  //ierr = verbPrintf(3, grid.com,"!!!!!!!!!! Current sea level %f \n",sea_level); CHKERRQ(ierr);
+
   ierr =    vH.begin_access(); CHKERRQ(ierr);
   ierr =  vbed.begin_access(); CHKERRQ(ierr);
   ierr = vMask.begin_access(); CHKERRQ(ierr);

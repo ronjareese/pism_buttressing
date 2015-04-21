@@ -55,6 +55,10 @@ PetscErrorCode IceModel::updateSurfaceElevationAndMask() {
     ierr = sub_gl_position(); CHKERRQ(ierr);
   }
 
+  if (config.get_flag("do_sigma_calc")) {
+    ierr = stress_balance->get_2D_stresses(txx, tyy, txy); CHKERRQ(ierr);
+  }
+
   return 0;
 }
 

@@ -362,6 +362,103 @@ PetscErrorCode SSA::compute_principal_strain_rates(IceModelVec2S &result_e1,
 }
 
 
+PetscErrorCode SSA::compute_2D_stresses(IceModelVec2S &result_Txx, IceModelVec2S &result_Tyy, IceModelVec2S &result_Txy) {
+  PetscErrorCode ierr;
+  PetscScalar dx = grid.dx, dy = grid.dy;
+
+  IceModelVec2S H = *thickness; // an alias
+  ierr = velocity.begin_access(); CHKERRQ(ierr);
+  ierr = H.begin_access(); CHKERRQ(ierr);
+  ierr = result_Txx.begin_access(); CHKERRQ(ierr);
+  ierr = result_Tyy.begin_access(); CHKERRQ(ierr);
+  ierr = result_Txy.begin_access(); CHKERRQ(ierr);
+
+  PetscScalar *E_ij;
+  //E = new PetscScalar[grid.Mz];
+  ierr = enthalpy->begin_access(); CHKERRQ(ierr);
+
+ for (PetscInt i=grid.xs; i<grid.xs+grid.xm; ++i) {
+    for (PetscInt j=grid.ys; j<grid.ys+grid.ym; ++j) {
+
+      if ( velocity(i,j).u == 0.0 || velocity(i,j).v == 0.0) {
+        result_Txx(i,j)=0.0;
+              result_Tyy(i,j)=0.0;
+        result_Txy(i,j)=0.0;
+        continue;
+      }
+
+      //centered difference scheme; strain in units s-1
+      PetscScalar
+        u_x = (velocity(i+1,j).u - velocity(i-1,j).u) / (2 * dx),
+        u_y = (velocity(i,j+1).u - velocity(i,j-1).u) / (2 * dy),
+        v_x = (velocity(i+1,j).v - velocity(i-1,j).v) / (2 * dx),
+        v_y = (velocity(i,j+1).v - velocity(i,j-1).v) / (2 * dy);
+
+      //inward scheme at the ice-shelf front
+      //FIXME: should be formulated in terms of mask values like principal strain rates
+
+      if (H(i+1,j)==0.0) {
+        u_x = (velocity(i,j).u - velocity(i-1,j).u) / dx;
+        v_x = (velocity(i,j).v - velocity(i-1,j).v) / dx;
+      }
+      if (H(i-1,j)==0.0) {
+        u_x = (velocity(i+1,j).u - velocity(i,j).u) / dx;
+        v_x = (velocity(i+1,j).v - velocity(i,j).v) / dx;
+      }
+      if (H(i,j+1)==0.0) {
+        u_y = (velocity(i,j).u - velocity(i,j-1).u) / dy;
+        v_y = (velocity(i,j).v - velocity(i,j-1).v) / dy;
+      }
+      if (H(i,j-1)==0.0) {
+        u_y = (velocity(i,j+1).u - velocity(i,j).u) / dy;
+        v_y = (velocity(i,j+1).v - velocity(i,j).v) / dy;
+      }
+
+     // ice nose case
+      if (H(i,j-1)==0.0 && H(i,j+1)==0.0) {
+        u_y = 0.0;
+        v_y = 0.0;
+      }
+      if (H(i+1,j)==0.0 && H(i-1,j)==0.0) {
+        u_x = 0.0;
+        v_x = 0.0;
+      }
+
+         //get hardness from enthalpie
+         PetscScalar BB;
+         ierr = enthalpy->getInternalColumn(i,j,&E_ij); CHKERRQ(ierr);
+         if (H(i,j) == 0) {
+         BB = -1e6; // an obviously impossible value
+         continue;
+         }
+         BB = flow_law->averaged_hardness(H(i,j), grid.kBelowHeight(H(i,j)),grid.zlevels.data(), E_ij); CHKERRQ(ierr);
+
+         //get local effective viscosity
+         PetscScalar nu = flow_law->effective_viscosity(BB, u_x, u_y, v_x, v_y);
+
+         //get deviatoric stresses
+         result_Txx(i,j)=nu*u_x;
+          result_Tyy(i,j)=nu*v_y;
+         result_Txy(i,j)=0.5*nu*(u_y+v_x);
+
+    } // j
+  } // i
+
+  ierr = velocity.end_access(); CHKERRQ(ierr);
+  ierr = H.end_access(); CHKERRQ(ierr);
+  ierr = result_Txx.end_access(); CHKERRQ(ierr);
+  ierr = result_Tyy.end_access(); CHKERRQ(ierr);
+  ierr = result_Txy.end_access(); CHKERRQ(ierr);
+
+  ierr = enthalpy->end_access(); CHKERRQ(ierr);
+
+  //delete [] E;
+
+
+  return 0;
+}
+
+
 //! \brief Compute the basal frictional heating.
 /*!
   Ice shelves have zero basal friction heating.

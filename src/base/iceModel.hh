@@ -222,6 +222,9 @@ protected:
     vbed,		//!< bed topography; ghosted
     vuplift,	//!< bed uplift rate; no ghosts
     vGhf,		//!< geothermal flux; no ghosts
+    txx, //!< deviatoric stress component xx
+    tyy, //!< deviatoric stress component yy
+    txy, //!< deviatoric shear stress component xy 
     bedtoptemp,     //!< temperature seen by bedrock thermal layer, if present; no ghosts
     vHref,          //!< accumulated mass advected to a partially filled grid cell
     vHresidual,     //!< residual ice mass of a not any longer partially (fully) filled grid cell

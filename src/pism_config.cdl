@@ -64,6 +64,9 @@ netcdf pism_config {
     pism_config:part_redist = "no";
     pism_config:part_redist_doc = "for partially filled grid cell scheme, redistribute residuals Hresidual";
 
+    pism_config:do_sigma_calc = "yes";
+    pism_config:do_sigma_calc_doc = "Calculation of (deviatoric) stresses sigma_xx, sigma_yy, sigma_xy.";
+
     pism_config:kill_icebergs = "no";
     pism_config:kill_icebergs_doc = "identify and kill detached ice-shelf areas";
 

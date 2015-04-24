@@ -91,7 +91,8 @@ PetscErrorCode IceModel::findIceBergCandidates() {
         hfloating = sea_level + (1.0 - ice_rho / ocean_rho) * vH(i, j);
 
       //cut of border of computational domain
-      if (hgrounded < hfloating && (i <= 0 || i >= Mx - 1 || j <= 0 || j >= My - 1)) {
+      //if (hgrounded < hfloating && (i <= 0 || i >= Mx - 1 || j <= 0 || j >= My - 1)) {
+      if (vMask(i, j) == MASK_ICE_FREE_OCEAN && (i <= 0 || i >= Mx - 1 || j <= 0 || j >= My - 1)) { //FIXME chere changed for locations where shelf meets directly the computational domain margin
         vH(i, j) = 0.0;
         vIcebergMask(i, j) = ICEBERGMASK_STOP_OCEAN;
         vMask(i, j) = MASK_ICE_FREE_OCEAN;

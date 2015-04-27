@@ -169,7 +169,8 @@ public:
 
   using ShallowStressBalance::compute_2D_stresses;
   virtual PetscErrorCode compute_2D_stresses(
-                IceModelVec2S &result_Txx, IceModelVec2S &result_Tyy, IceModelVec2S &result_Txy);
+                IceModelVec2S &result_Txx, IceModelVec2S &result_Tyy, IceModelVec2S &result_Txy, 
+                IceModelVec2S &result_Sn, IceModelVec2S &result_St, IceModelVec2S &result_Smag);
 
 protected:
   virtual PetscErrorCode allocate();

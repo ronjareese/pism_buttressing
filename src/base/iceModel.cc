@@ -409,6 +409,25 @@ PetscErrorCode IceModel::createVecs() {
     ierr = variables.add(txy); CHKERRQ(ierr);
   }
 
+  //buttressing values
+  if (config.get_flag("do_buttratio_calc")==true) {
+    ierr = Sn.create(grid, "Sn", true); CHKERRQ(ierr);
+    ierr = Sn.set_attrs("internal",
+                                  "normal buttressing ratio",
+                                  "", ""); CHKERRQ(ierr);
+    ierr = variables.add(Sn); CHKERRQ(ierr);
+    ierr = St.create(grid, "St", true); CHKERRQ(ierr);
+    ierr = St.set_attrs("internal",
+                                  "tangential buttressing ratio",
+                                  "", ""); CHKERRQ(ierr);
+    ierr = variables.add(St); CHKERRQ(ierr);
+    ierr = Smag.create(grid, "Smag", true); CHKERRQ(ierr);
+    ierr = Smag.set_attrs("internal",
+                                  "magnitude of buttressing ratio",
+                                  "", ""); CHKERRQ(ierr);
+    ierr = variables.add(Smag); CHKERRQ(ierr);
+  }
+
   if (config.get_flag("do_eigen_calving") == true) {
     ierr = vPrinStrain1.create(grid, "edot_1", true); CHKERRQ(ierr);
     ierr = vPrinStrain1.set_attrs("internal", 

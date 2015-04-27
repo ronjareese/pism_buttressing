@@ -225,6 +225,9 @@ protected:
     txx, //!< deviatoric stress component xx
     tyy, //!< deviatoric stress component yy
     txy, //!< deviatoric shear stress component xy 
+    Sn, //!< normal buttressing ratio 
+    St, //!< tangential buttressing ratio 
+    Smag, //!< magnitude of buttressing ratio 
     bedtoptemp,     //!< temperature seen by bedrock thermal layer, if present; no ghosts
     vHref,          //!< accumulated mass advected to a partially filled grid cell
     vHresidual,     //!< residual ice mass of a not any longer partially (fully) filled grid cell

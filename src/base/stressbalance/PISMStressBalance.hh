@@ -110,7 +110,9 @@ public:
 
   //! \brief Get the components of the 2D deviatoric stress tensor.
   virtual PetscErrorCode get_2D_stresses(
-                IceModelVec2S &result_Txx, IceModelVec2S &result_Tyy, IceModelVec2S &result_Txy);
+                IceModelVec2S &result_Txx, IceModelVec2S &result_Tyy, 
+                IceModelVec2S &result_Txy, IceModelVec2S &result_Sn,
+                IceModelVec2S &result_St, IceModelVec2S &result_Smag);
 
   //! \brief Produce a report string for the standard output.
   virtual PetscErrorCode stdout_report(string &result);

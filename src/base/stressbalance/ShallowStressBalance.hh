@@ -85,7 +85,9 @@ public:
   { SETERRQ(grid.com, 1,"not implemented in base class"); return 0; }
 
   virtual PetscErrorCode compute_2D_stresses(
-                IceModelVec2S &/*result_Txx*/, IceModelVec2S &/*result_Tyy*/, IceModelVec2S &/*result_Txy*/)
+                IceModelVec2S &/*result_Txx*/, IceModelVec2S &/*result_Tyy*/, 
+                IceModelVec2S &/*result_Txy*/, IceModelVec2S &/*result_Sn*/,
+                IceModelVec2S &/*result_St*/, IceModelVec2S &/*result_Smag*/)
   { SETERRQ(grid.com, 1,"not implemented in base class"); return 0; }
 
   // helpers:

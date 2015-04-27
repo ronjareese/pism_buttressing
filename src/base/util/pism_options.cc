@@ -747,6 +747,13 @@ PetscErrorCode set_config_from_options(MPI_Comm /*com*/, NCConfigVariable &confi
   // gl fix
   ierr = config.flag_from_option("no_gl_fix", "avoid_gl_fix"); CHKERRQ(ierr);
 
+
+  // calculation of deviatoric stresses
+  ierr = config.flag_from_option("sigma_calc", "do_sigma_calc"); CHKERRQ(ierr);
+
+  // calculation of buttressing ratio
+  ierr = config.flag_from_option("buttratio_calc", "do_buttratio_calc"); CHKERRQ(ierr);
+
   return 0;
 }
 

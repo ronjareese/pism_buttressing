@@ -413,19 +413,51 @@ PetscErrorCode IceModel::createVecs() {
   if (config.get_flag("do_buttratio_calc")==true) {
     ierr = Sn.create(grid, "Sn", true); CHKERRQ(ierr);
     ierr = Sn.set_attrs("internal",
-                                  "normal buttressing ratio",
+                                  "normal buttressing ratio in flow direction",
                                   "", ""); CHKERRQ(ierr);
     ierr = variables.add(Sn); CHKERRQ(ierr);
     ierr = St.create(grid, "St", true); CHKERRQ(ierr);
     ierr = St.set_attrs("internal",
-                                  "tangential buttressing ratio",
+                                  "tangential buttressing ratio in flow direction",
                                   "", ""); CHKERRQ(ierr);
     ierr = variables.add(St); CHKERRQ(ierr);
     ierr = Smag.create(grid, "Smag", true); CHKERRQ(ierr);
     ierr = Smag.set_attrs("internal",
-                                  "magnitude of buttressing ratio",
+                                  "magnitude of buttressing ratio in flow direction",
                                   "", ""); CHKERRQ(ierr);
     ierr = variables.add(Smag); CHKERRQ(ierr);
+    
+    ierr = Snx.create(grid, "Snx", true); CHKERRQ(ierr);
+    ierr = Snx.set_attrs("internal",
+                                  "normal buttressing ratio in x-direction",
+                                  "", ""); CHKERRQ(ierr);
+    ierr = variables.add(Snx); CHKERRQ(ierr);
+    ierr = Stx.create(grid, "Stx", true); CHKERRQ(ierr);
+    ierr = Stx.set_attrs("internal",
+                                  "tangential buttressing ratio in x-direction",
+                                  "", ""); CHKERRQ(ierr);
+    ierr = variables.add(Stx); CHKERRQ(ierr);
+    ierr = Smagx.create(grid, "Smagx", true); CHKERRQ(ierr);
+    ierr = Smagx.set_attrs("internal",
+                                  "magnitude of buttressing ratio in x-direction",
+                                  "", ""); CHKERRQ(ierr);
+    ierr = variables.add(Smagx); CHKERRQ(ierr);
+    
+    ierr = Sny.create(grid, "Sny", true); CHKERRQ(ierr);
+    ierr = Sny.set_attrs("internal",
+                                  "normal buttressing ratio in y-direction",
+                                  "", ""); CHKERRQ(ierr);
+    ierr = variables.add(Sny); CHKERRQ(ierr);
+    ierr = Sty.create(grid, "Sty", true); CHKERRQ(ierr);
+    ierr = Sty.set_attrs("internal",
+                                  "tangential buttressing ratio in y-direction",
+                                  "", ""); CHKERRQ(ierr);
+    ierr = variables.add(Sty); CHKERRQ(ierr);
+    ierr = Smagy.create(grid, "Smagy", true); CHKERRQ(ierr);
+    ierr = Smagy.set_attrs("internal",
+                                  "magnitude of buttressing ratio in y-direction",
+                                  "", ""); CHKERRQ(ierr);
+    ierr = variables.add(Smagy); CHKERRQ(ierr);
   }
 
   if (config.get_flag("do_eigen_calving") == true) {

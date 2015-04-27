@@ -362,7 +362,10 @@ PetscErrorCode SSA::compute_principal_strain_rates(IceModelVec2S &result_e1,
 }
 
 
-PetscErrorCode SSA::compute_2D_stresses(IceModelVec2S &result_Txx, IceModelVec2S &result_Tyy, IceModelVec2S &result_Txy, IceModelVec2S &result_Sn, IceModelVec2S &result_St, IceModelVec2S &result_Smag) {
+PetscErrorCode SSA::compute_2D_stresses(IceModelVec2S &result_Txx, IceModelVec2S &result_Tyy, IceModelVec2S &result_Txy, 
+                                        IceModelVec2S &result_Sn, IceModelVec2S &result_St, IceModelVec2S &result_Smag,
+                                        IceModelVec2S &result_Snx, IceModelVec2S &result_Stx, IceModelVec2S &result_Smagx,
+                                        IceModelVec2S &result_Sny, IceModelVec2S &result_Sty, IceModelVec2S &result_Smagy) {
 
   PetscErrorCode ierr;
   PetscScalar dx = grid.dx, dy = grid.dy;
@@ -388,6 +391,12 @@ PetscErrorCode SSA::compute_2D_stresses(IceModelVec2S &result_Txx, IceModelVec2S
     ierr = result_Sn.begin_access(); CHKERRQ(ierr);
     ierr = result_St.begin_access(); CHKERRQ(ierr);
     ierr = result_Smag.begin_access(); CHKERRQ(ierr);
+    ierr = result_Snx.begin_access(); CHKERRQ(ierr);
+    ierr = result_Stx.begin_access(); CHKERRQ(ierr);
+    ierr = result_Smagx.begin_access(); CHKERRQ(ierr);
+    ierr = result_Sny.begin_access(); CHKERRQ(ierr);
+    ierr = result_Sty.begin_access(); CHKERRQ(ierr);
+    ierr = result_Smagy.begin_access(); CHKERRQ(ierr);
   }
 
  for (PetscInt i=grid.xs; i<grid.xs+grid.xm; ++i) {
@@ -456,10 +465,28 @@ PetscErrorCode SSA::compute_2D_stresses(IceModelVec2S &result_Txx, IceModelVec2S
 
 
         if (do_buttratio) { //FIXME here, we multiply by H and divide by H, is this necessary?
+          //FIXME Does the calculatuion of mag make sense?
           PetscScalar ocean_pressure = 0.5 * ice_rho * standard_gravity * (1 - (ice_rho / ocean_rho))*H(i,j)*H(i,j);
-          //calculate buttressing ratios
-          result_Sn(i,j)= (2.0*result_Txx(i,j) + result_Tyy(i,j)) * H(i,j) / ocean_pressure;
-          result_St(i,j)= result_Txy(i,j) * H(i,j) / ocean_pressure;
+
+          //calculate buttressing ratios in x-direction
+          result_Snx(i,j)= (2.0*result_Txx(i,j) + result_Tyy(i,j)) * H(i,j) / ocean_pressure;
+          result_Stx(i,j)= result_Txy(i,j) * H(i,j) / ocean_pressure;
+          result_Smagx(i,j)=sqrt( result_Snx(i,j)*result_Snx(i,j) + result_Stx(i,j)*result_Stx(i,j) );
+          
+          //calculate buttressing ratios in y-direction
+          result_Sny(i,j)= (2.0*result_Tyy(i,j) + result_Txx(i,j)) * H(i,j) / ocean_pressure;
+          result_Sty(i,j)= -1.0* result_Txy(i,j) * H(i,j) / ocean_pressure;
+          result_Smagy(i,j)=sqrt( result_Sny(i,j)*result_Sny(i,j) + result_Sty(i,j)*result_Sty(i,j) );
+          
+          // calculate buttressing ratios in flow direction
+          //FIXME flow direction != normal at grounding line, do we want this calculation or not? 
+          result_Sn(i,j)= 1.0/(velocity(i,j).u*velocity(i,j).u+ velocity(i,j).v*velocity(i,j).v)*
+                          ((2.0*result_Txx(i,j)+ result_Tyy(i,j))*velocity(i,j).u*velocity(i,j).u +
+                           2.0*result_Txy(i,j)*velocity(i,j).u*velocity(i,j).v +
+                           (2.0*result_Tyy(i,j)+ result_Txx(i,j))*velocity(i,j).v*velocity(i,j).v ) * H(i,j) / ocean_pressure;
+          result_St(i,j)= 1.0/(velocity(i,j).u*velocity(i,j).u+ velocity(i,j).v*velocity(i,j).v)*
+                          (velocity(i,j).u*velocity(i,j).v*(result_Tyy(i,j) - result_Txx(i,j)) +
+                           (velocity(i,j).u*velocity(i,j).u - velocity(i,j).v*velocity(i,j).v)*result_Txy(i,j)) * H(i,j) / ocean_pressure;
           result_Smag(i,j)=sqrt( result_Sn(i,j)*result_Sn(i,j) + result_St(i,j)*result_St(i,j) );
         }
 
@@ -476,6 +503,12 @@ PetscErrorCode SSA::compute_2D_stresses(IceModelVec2S &result_Txx, IceModelVec2S
     ierr = result_Sn.end_access(); CHKERRQ(ierr);
     ierr = result_St.end_access(); CHKERRQ(ierr);
     ierr = result_Smag.end_access(); CHKERRQ(ierr);
+    ierr = result_Snx.end_access(); CHKERRQ(ierr);
+    ierr = result_Stx.end_access(); CHKERRQ(ierr);
+    ierr = result_Smagx.end_access(); CHKERRQ(ierr);
+    ierr = result_Sny.end_access(); CHKERRQ(ierr);
+    ierr = result_Sty.end_access(); CHKERRQ(ierr);
+    ierr = result_Smagy.end_access(); CHKERRQ(ierr);
   }
 
   ierr = enthalpy->end_access(); CHKERRQ(ierr);

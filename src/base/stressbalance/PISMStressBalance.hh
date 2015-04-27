@@ -112,7 +112,10 @@ public:
   virtual PetscErrorCode get_2D_stresses(
                 IceModelVec2S &result_Txx, IceModelVec2S &result_Tyy, 
                 IceModelVec2S &result_Txy, IceModelVec2S &result_Sn,
-                IceModelVec2S &result_St, IceModelVec2S &result_Smag);
+                IceModelVec2S &result_St, IceModelVec2S &result_Smag, 
+                IceModelVec2S &result_Snx, IceModelVec2S &result_Stx, 
+                IceModelVec2S &result_Smagx, IceModelVec2S &result_Sny,
+                IceModelVec2S &result_Sty, IceModelVec2S &result_Smagy);
 
   //! \brief Produce a report string for the standard output.
   virtual PetscErrorCode stdout_report(string &result);

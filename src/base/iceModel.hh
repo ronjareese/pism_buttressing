@@ -225,9 +225,15 @@ protected:
     txx, //!< deviatoric stress component xx
     tyy, //!< deviatoric stress component yy
     txy, //!< deviatoric shear stress component xy 
-    Sn, //!< normal buttressing ratio 
-    St, //!< tangential buttressing ratio 
-    Smag, //!< magnitude of buttressing ratio 
+    Sn, //!< normal buttressing ratio in (local) flow direction
+    St, //!< tangential buttressing ratio in (local) flow direction
+    Smag, //!< magnitude of buttressing ratio in (local) flow direction
+    Snx, //!< normal buttressing ratio in x-direction
+    Stx, //!< tangential buttressing ratio in x-direction
+    Smagx, //!< magnitude of buttressing ratio in x-direction
+    Sny, //!< normal buttressing ratio in y-direction
+    Sty, //!< tangential buttressing ratio in y-direction
+    Smagy, //!< magnitude of buttressing ratio in y-direction
     bedtoptemp,     //!< temperature seen by bedrock thermal layer, if present; no ghosts
     vHref,          //!< accumulated mass advected to a partially filled grid cell
     vHresidual,     //!< residual ice mass of a not any longer partially (fully) filled grid cell
